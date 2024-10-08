@@ -14,17 +14,15 @@
     <label for="segmentDuration">Durée de chaque segment (en secondes) :</label>
     <input type="number" id="segmentDuration" value="30"><br><br>
 
-    <button onclick="generateSegments()">Découper la vidéo</button>
+    <button onclick="uploadAndCutVideo()">Découper la vidéo</button>
 
     <h2>Résultat :</h2>
     <ul id="segmentsList"></ul>
 
     <script>
-        function generateSegments() {
+        function uploadAndCutVideo() {
             const fileInput = document.getElementById('videoFile');
             const segmentDuration = parseInt(document.getElementById('segmentDuration').value);
-            const segmentsList = document.getElementById('segmentsList');
-            segmentsList.innerHTML = ''; // Vider la liste de segments précédents
 
             if (!fileInput.files.length) {
                 alert('Veuillez sélectionner une vidéo.');
@@ -32,22 +30,32 @@
             }
 
             const videoFile = fileInput.files[0];
-            const videoURL = URL.createObjectURL(videoFile);
-            const video = document.createElement('video');
+            const formData = new FormData();
+            formData.append('video', videoFile);
+            formData.append('segmentDuration', segmentDuration);
 
-            video.src = videoURL;
-            video.onloadedmetadata = () => {
-                const videoDuration = Math.floor(video.duration); // Durée de la vidéo en secondes
-                let segmentNumber = 1;
+            fetch('/cut-video', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                const segmentsList = document.getElementById('segmentsList');
+                segmentsList.innerHTML = ''; // Vider la liste de segments précédents
 
-                for (let start = 0; start < videoDuration; start += segmentDuration) {
-                    const end = Math.min(start + segmentDuration, videoDuration);
+                data.segments.forEach((segment, index) => {
                     const segmentItem = document.createElement('li');
-                    segmentItem.textContent = `Segment ${segmentNumber}: de ${start}s à ${end}s`;
+                    const link = document.createElement('a');
+                    link.href = segment;
+                    link.textContent = `Télécharger le segment ${index + 1}`;
+                    link.download = `segment${index + 1}.mp4`;
+                    segmentItem.appendChild(link);
                     segmentsList.appendChild(segmentItem);
-                    segmentNumber++;
-                }
-            };
+                });
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+            });
         }
     </script>
 </body>
