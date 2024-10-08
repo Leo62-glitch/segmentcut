@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Découpeur de Vidéo</title>
+</head>
+<body>
+    <h1>Découpeur de Vidéo</h1>
+
+    <label for="videoFile">Sélectionnez une vidéo :</label>
+    <input type="file" id="videoFile" accept="video/*"><br><br>
+
+    <label for="segmentDuration">Durée de chaque segment (en secondes) :</label>
+    <input type="number" id="segmentDuration" value="30"><br><br>
+
+    <button onclick="generateSegments()">Découper la vidéo</button>
+
+    <h2>Résultat :</h2>
+    <ul id="segmentsList"></ul>
+
+    <script>
+        function generateSegments() {
+            const fileInput = document.getElementById('videoFile');
+            const segmentDuration = parseInt(document.getElementById('segmentDuration').value);
+            const segmentsList = document.getElementById('segmentsList');
+            segmentsList.innerHTML = ''; // Vider la liste de segments précédents
+
+            if (!fileInput.files.length) {
+                alert('Veuillez sélectionner une vidéo.');
+                return;
+            }
+
+            const videoFile = fileInput.files[0];
+            const videoURL = URL.createObjectURL(videoFile);
+            const video = document.createElement('video');
+
+            video.src = videoURL;
+            video.onloadedmetadata = () => {
+                const videoDuration = Math.floor(video.duration); // Durée de la vidéo en secondes
+                let segmentNumber = 1;
+
+                for (let start = 0; start < videoDuration; start += segmentDuration) {
+                    const end = Math.min(start + segmentDuration, videoDuration);
+                    const segmentItem = document.createElement('li');
+                    segmentItem.textContent = `Segment ${segmentNumber}: de ${start}s à ${end}s`;
+                    segmentsList.appendChild(segmentItem);
+                    segmentNumber++;
+                }
+            };
+        }
+    </script>
+</body>
+</html>
