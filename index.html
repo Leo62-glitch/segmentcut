@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Découper une vidéo en segments de 30 secondes</title>
+    <title>Découper une vidéo localement</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -54,7 +54,7 @@
 </head>
 <body>
 
-<h1>Découper une vidéo en segments de 30 secondes</h1>
+<h1>Découper une vidéo en segments localement</h1>
 
 <!-- Upload d'une vidéo -->
 <input type="file" id="videoUpload" accept="video/*">
@@ -62,24 +62,26 @@
 <!-- Vidéo chargée -->
 <video id="sourceVideo" controls></video>
 
-<!-- Bouton pour démarrer le découpage -->
+<!-- Boutons pour sélectionner les segments -->
 <div class="controls">
-    <button id="startCutting">Découper en segments de 30 secondes</button>
+    <label for="startTime">Début (en secondes) :</label>
+    <input type="number" id="startTime" value="0" min="0">
+
+    <label for="endTime">Fin (en secondes) :</label>
+    <input type="number" id="endTime" value="30" min="0">
+    
+    <button id="cutButton">Découper le segment</button>
 </div>
 
-<!-- Affichage des segments découpés -->
+<!-- Affichage du résultat -->
 <div id="output"></div>
 
-<!-- Inclusion de FFmpeg.wasm -->
-<script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.10.0"></script>
-
 <script>
-    const { createFFmpeg, fetchFile } = FFmpeg;
-    const ffmpeg = createFFmpeg({ log: true });
-
     const videoUpload = document.getElementById('videoUpload');
     const video = document.getElementById('sourceVideo');
-    const startCuttingButton = document.getElementById('startCutting');
+    const cutButton = document.getElementById('cutButton');
+    const startTimeInput = document.getElementById('startTime');
+    const endTimeInput = document.getElementById('endTime');
     const output = document.getElementById('output');
 
     let videoFile;
@@ -97,62 +99,22 @@
         }
     });
 
-    // Découper la vidéo en segments de 30 secondes
-    startCuttingButton.addEventListener('click', async () => {
-        if (!videoFile) {
-            alert('Veuillez d\'abord charger une vidéo.');
-            return;
+    // Découper un segment de la vidéo (ne fait qu'un "affichage", pas un vrai découpage vidéo)
+    cutButton.addEventListener('click', () => {
+        const startTime = parseFloat(startTimeInput.value);
+        const endTime = parseFloat(endTimeInput.value);
+
+        if (videoFile && !isNaN(startTime) && !isNaN(endTime) && startTime < endTime) {
+            video.currentTime = startTime;
+            video.play();
+
+            setTimeout(() => {
+                video.pause();
+                output.innerHTML = `<p>Segment de ${startTime} à ${endTime} secondes.</p>`;
+            }, (endTime - startTime) * 1000);
+        } else {
+            alert('Veuillez entrer des temps valides.');
         }
-
-        // Charger FFmpeg
-        await ffmpeg.load();
-
-        // Charger le fichier vidéo dans FFmpeg
-        ffmpeg.FS('writeFile', 'input.mp4', await fetchFile(videoFile));
-
-        // Obtenir la durée de la vidéo
-        const videoDuration = video.duration;
-        const segmentDuration = 30;
-        let segmentIndex = 1;
-        let currentTime = 0;
-
-        // Réinitialiser la sortie
-        output.innerHTML = '';
-
-        // Découpage en segments
-        while (currentTime < videoDuration) {
-            const startTime = currentTime;
-            const endTime = Math.min(currentTime + segmentDuration, videoDuration);
-
-            // Nom du fichier segmenté
-            const outputFilename = `segment-${segmentIndex}.mp4`;
-
-            // Utiliser FFmpeg pour découper la vidéo
-            await ffmpeg.run(
-                '-i', 'input.mp4',
-                '-ss', `${startTime}`,
-                '-to', `${endTime}`,
-                '-c', 'copy',  // Utilisation du codec 'copy' pour éviter le réencodage
-                outputFilename
-            );
-
-            // Lire le fichier de sortie et créer un lien de téléchargement
-            const data = ffmpeg.FS('readFile', outputFilename);
-            const blob = new Blob([data.buffer], { type: 'video/mp4' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = outputFilename;
-            a.innerText = `Télécharger le segment ${segmentIndex}`;
-            output.appendChild(a);
-            output.appendChild(document.createElement('br'));
-
-            // Passer au segment suivant
-            currentTime = endTime;
-            segmentIndex++;
-        }
-
-        console.log('Découpage terminé.');
     });
 </script>
 
