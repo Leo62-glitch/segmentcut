@@ -60,8 +60,6 @@
     const startCuttingButton = document.getElementById('startCutting');
     const output = document.getElementById('output');
     
-    let mediaRecorder;
-    let chunks = [];
     let videoURL;
 
     // Charger la vidéo uploadée
@@ -100,33 +98,29 @@
                 canvas.width = video.videoWidth;
                 canvas.height = video.videoHeight;
 
-                // Capturer l'image du segment
-                const drawFrame = () => {
-                    if (video.currentTime < segmentEnd) {
-                        context.drawImage(video, 0, 0, canvas.width, canvas.height);
-                        requestAnimationFrame(drawFrame);
-                    } else {
-                        const segmentBlob = canvas.toBlob((blob) => {
-                            // Créer un lien pour télécharger le segment
-                            const segmentURL = URL.createObjectURL(blob);
-                            const a = document.createElement('a');
-                            a.href = segmentURL;
-                            a.download = `segment-${segmentIndex}.mp4`;
-                            a.innerText = `Télécharger le segment ${segmentIndex}`;
-                            output.appendChild(a);
-                            output.appendChild(document.createElement('br'));
-
-                            // Passer au segment suivant
-                            currentTime = segmentEnd;
-                            segmentIndex++;
-                            captureSegment(); // Capturer le segment suivant
-                        }, 'video/mp4');
-                    }
-                };
-
-                // Aller à l'heure de début du segment et commencer à capturer
+                // Capture le frame actuel de la vidéo
                 video.currentTime = currentTime;
-                drawFrame();
+
+                video.addEventListener('seeked', () => {
+                    // Capture image pour ce segment
+                    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                    // Créer le lien pour télécharger le segment
+                    canvas.toBlob((blob) => {
+                        const segmentURL = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = segmentURL;
+                        a.download = `segment-${segmentIndex}.png`; // Format PNG pour les images extraites
+                        a.innerText = `Télécharger le segment ${segmentIndex}`;
+                        output.appendChild(a);
+                        output.appendChild(document.createElement('br'));
+
+                        // Passer au segment suivant
+                        currentTime = segmentEnd;
+                        segmentIndex++;
+                        captureSegment(); // Capturer le segment suivant
+                    }, 'image/png');
+                }, { once: true });
             };
 
             captureSegment(); // Démarrer la capture des segments
