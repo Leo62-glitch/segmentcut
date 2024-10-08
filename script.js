@@ -1,53 +1,73 @@
-const express = require('express');
-const multer = require('multer');
-const ffmpeg = require('fluent-ffmpeg');
-const path = require('path');
-const fs = require('fs');
+const videoUpload = document.getElementById('videoUpload');
+const video = document.getElementById('sourceVideo');
+const startCuttingButton = document.getElementById('startCutting');
+const output = document.getElementById('output');
 
-const app = express();
-const upload = multer({ dest: 'uploads/' });
+let videoURL;
 
-app.use(express.static('public')); // Servir les fichiers statiques
-
-app.post('/cut-video', upload.single('video'), (req, res) => {
-    const videoPath = req.file.path;
-    const segmentDuration = parseInt(req.body.segmentDuration);
-    const outputDir = 'output/';
-    const outputSegments = [];
-
-    if (!fs.existsSync(outputDir)){
-        fs.mkdirSync(outputDir);
+// Charger la vidéo uploadée
+videoUpload.addEventListener('change', (event) => {
+    const file = event.target.files[0];
+    if (file) {
+        videoURL = URL.createObjectURL(file);
+        video.src = videoURL;
+        video.load();
     }
-
-    // Obtenir la durée de la vidéo avec ffmpeg
-    ffmpeg.ffprobe(videoPath, function(err, metadata) {
-        if (err) {
-            return res.status(500).json({ error: 'Erreur lors de la lecture des métadonnées vidéo.' });
-        }
-
-        const videoDuration = metadata.format.duration;
-        let segmentIndex = 0;
-        
-        for (let startTime = 0; startTime < videoDuration; startTime += segmentDuration) {
-            segmentIndex++;
-            const outputFile = path.join(outputDir, `segment${segmentIndex}.mp4`);
-            outputSegments.push(outputFile);
-
-            ffmpeg(videoPath)
-                .setStartTime(startTime)
-                .setDuration(segmentDuration)
-                .output(outputFile)
-                .on('end', () => {
-                    if (startTime + segmentDuration >= videoDuration) {
-                        res.json({ segments: outputSegments.map(segment => `/${segment}`) });
-                    }
-                })
-                .run();
-        }
-    });
 });
 
-// Démarrer le serveur
-app.listen(3000, () => {
-    console.log('Serveur démarré sur http://localhost:3000');
+// Découper la vidéo en segments de 30 secondes
+startCuttingButton.addEventListener('click', () => {
+    if (video.src) {
+        const videoDuration = video.duration; // Durée totale de la vidéo
+        const segmentDuration = 30; // Durée de chaque segment en secondes
+        let currentTime = 0;
+        let segmentIndex = 1;
+
+        // Réinitialiser la sortie
+        output.innerHTML = '';
+
+        // Fonction pour capturer chaque segment
+        const captureSegment = () => {
+            if (currentTime >= videoDuration) {
+                console.log('Découpage terminé.');
+                return;
+            }
+
+            const segmentEnd = Math.min(currentTime + segmentDuration, videoDuration);
+
+            // Créer un canvas pour capturer la vidéo
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+
+            // Capture le frame actuel de la vidéo
+            video.currentTime = currentTime;
+
+            video.addEventListener('seeked', () => {
+                // Capture image pour ce segment
+                context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                // Créer le lien pour télécharger le segment
+                canvas.toBlob((blob) => {
+                    const segmentURL = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = segmentURL;
+                    a.download = `segment-${segmentIndex}.png`; // Format PNG pour les images extraites
+                    a.innerText = `Télécharger le segment ${segmentIndex}`;
+                    output.appendChild(a);
+                    output.appendChild(document.createElement('br'));
+
+                    // Passer au segment suivant
+                    currentTime = segmentEnd;
+                    segmentIndex++;
+                    captureSegment(); // Capturer le segment suivant
+                }, 'image/png');
+            }, { once: true });
+        };
+
+        captureSegment(); // Démarrer la capture des segments
+    } else {
+        alert('Veuillez d\'abord charger une vidéo.');
+    }
 });
