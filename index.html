@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Découper une vidéo localement</title>
+    <title>Découper une vidéo localement et télécharger</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -54,7 +54,7 @@
 </head>
 <body>
 
-<h1>Découper une vidéo en segments localement</h1>
+<h1>Découper et télécharger un segment de vidéo</h1>
 
 <!-- Upload d'une vidéo -->
 <input type="file" id="videoUpload" accept="video/*">
@@ -70,7 +70,7 @@
     <label for="endTime">Fin (en secondes) :</label>
     <input type="number" id="endTime" value="30" min="0">
     
-    <button id="cutButton">Découper le segment</button>
+    <button id="cutButton">Découper et télécharger le segment</button>
 </div>
 
 <!-- Affichage du résultat -->
@@ -85,6 +85,8 @@
     const output = document.getElementById('output');
 
     let videoFile;
+    let mediaRecorder;
+    let recordedBlobs = [];
 
     // Charger la vidéo uploadée
     videoUpload.addEventListener('change', (event) => {
@@ -99,23 +101,73 @@
         }
     });
 
-    // Découper un segment de la vidéo (ne fait qu'un "affichage", pas un vrai découpage vidéo)
+    // Enregistrer un segment de vidéo
     cutButton.addEventListener('click', () => {
         const startTime = parseFloat(startTimeInput.value);
         const endTime = parseFloat(endTimeInput.value);
 
         if (videoFile && !isNaN(startTime) && !isNaN(endTime) && startTime < endTime) {
             video.currentTime = startTime;
-            video.play();
 
-            setTimeout(() => {
-                video.pause();
-                output.innerHTML = `<p>Segment de ${startTime} à ${endTime} secondes.</p>`;
-            }, (endTime - startTime) * 1000);
+            // Démarrer l'enregistrement après avoir commencé la lecture
+            video.addEventListener('play', () => {
+                startRecording();
+
+                setTimeout(() => {
+                    stopRecording();
+                    downloadSegment();
+                }, (endTime - startTime) * 1000);
+            }, { once: true });
+
+            video.play();
         } else {
             alert('Veuillez entrer des temps valides.');
         }
     });
+
+    // Fonction pour démarrer l'enregistrement du segment
+    function startRecording() {
+        recordedBlobs = [];
+        const options = { mimeType: 'video/webm;codecs=vp9' };
+        try {
+            mediaRecorder = new MediaRecorder(video.captureStream(), options);
+        } catch (e) {
+            console.error('MediaRecorder n\'est pas supporté dans ce navigateur:', e);
+            return;
+        }
+
+        mediaRecorder.ondataavailable = (event) => {
+            if (event.data && event.data.size > 0) {
+                recordedBlobs.push(event.data);
+            }
+        };
+
+        mediaRecorder.start();
+        console.log('Enregistrement commencé.');
+    }
+
+    // Fonction pour arrêter l'enregistrement
+    function stopRecording() {
+        mediaRecorder.stop();
+        console.log('Enregistrement arrêté.');
+    }
+
+    // Fonction pour télécharger le segment enregistré
+    function downloadSegment() {
+        const blob = new Blob(recordedBlobs, { type: 'video/webm' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = 'segment.webm';
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => {
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        }, 100);
+        output.innerHTML = `<p>Segment téléchargé en tant que fichier "segment.webm".</p>`;
+    }
 </script>
 
 </body>
