@@ -12,6 +12,9 @@ videoUpload.addEventListener('change', (event) => {
         videoURL = URL.createObjectURL(file);
         video.src = videoURL;
         video.load();
+        console.log('Vidéo chargée avec succès.');
+    } else {
+        console.log('Aucun fichier sélectionné.');
     }
 });
 
@@ -22,6 +25,9 @@ startCuttingButton.addEventListener('click', () => {
         const segmentDuration = 30; // Durée de chaque segment en secondes
         let currentTime = 0;
         let segmentIndex = 1;
+
+        // Vérifier la durée de la vidéo
+        console.log(`La durée totale de la vidéo est de ${videoDuration} secondes.`);
 
         // Réinitialiser la sortie
         output.innerHTML = '';
@@ -66,8 +72,11 @@ startCuttingButton.addEventListener('click', () => {
             }, { once: true });
         };
 
-        captureSegment(); // Démarrer la capture des segments
+        // Démarrer la capture des segments
+        captureSegment();
+        console.log('Découpage en segments démarré.');
     } else {
         alert('Veuillez d\'abord charger une vidéo.');
+        console.log('Aucune vidéo n\'a été chargée.');
     }
 });
