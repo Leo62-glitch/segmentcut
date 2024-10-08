@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
+    <meta charset="viewport" content="width=device-width, initial-scale=1.0">
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Découper une vidéo en segments de 30 secondes</title>
     <style>
         body {
@@ -10,6 +10,7 @@
             text-align: center;
             background-color: #f9f9f9;
         }
+
         video {
             display: block;
             margin: 20px auto;
@@ -17,9 +18,11 @@
             height: 360px;
             border: 1px solid #ccc;
         }
+
         .controls {
             margin-top: 20px;
         }
+
         button {
             padding: 10px 20px;
             background-color: #007BFF;
@@ -28,9 +31,11 @@
             cursor: pointer;
             border-radius: 5px;
         }
+
         button:hover {
             background-color: #0056b3;
         }
+
         #output {
             margin-top: 20px;
         }
@@ -57,7 +62,6 @@
 <!-- Inclusion de FFmpeg.wasm -->
 <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.10.0"></script>
 
-<!-- Inclusion du fichier JavaScript -->
 <script>
     const { createFFmpeg, fetchFile } = FFmpeg;
     const ffmpeg = createFFmpeg({ log: true });
@@ -70,7 +74,7 @@
     let videoFile;
 
     // Charger la vidéo uploadée
-    videoUpload.addEventListener('change', async (event) => {
+    videoUpload.addEventListener('change', (event) => {
         const file = event.target.files[0];
         if (file) {
             videoFile = file;
@@ -104,12 +108,15 @@
         // Réinitialiser la sortie
         output.innerHTML = '';
 
+        // Découpage en segments
         while (currentTime < videoDuration) {
             const startTime = currentTime;
             const endTime = Math.min(currentTime + segmentDuration, videoDuration);
 
-            // Utiliser FFmpeg pour découper la vidéo
+            // Nom du fichier segmenté
             const outputFilename = `segment-${segmentIndex}.mp4`;
+
+            // Utiliser FFmpeg pour découper la vidéo
             await ffmpeg.run(
                 '-i', 'input.mp4',
                 '-ss', `${startTime}`,
